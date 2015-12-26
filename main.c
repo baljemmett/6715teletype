@@ -22,17 +22,31 @@
 #pragma config LPBOR = OFF      // Low-Power Brown Out Reset (Low-Power BOR is disabled)
 #pragma config LVP = ON         // Low-Voltage Programming Enable (Low-voltage programming enabled)
 
+#include <stdio.h>
+#include "uart.h"
+#define _XTAL_FREQ 18432000
+
 int main(int argc, char* argv[])
 {
     ANSELA = 0;
+    ANSELB = 0;
+    ANSELC = 0;
+    
+    uart_init();
     
     TRISA0 = 0;
     TRISA1 = 0;
     
+    LATA0 = 0;
+    LATA1 = 0;
+    
     while (1)
     {
-        LATA0  = 0;
-        LATA0  = 1;
-        LATA1 ^= 1;
+        for (unsigned char c = '0'; c <= '9'; c++)
+        {
+            LATA0 ^= 1;
+            putchar(c);
+            __delay_ms(10);
+        }
     }
 }
