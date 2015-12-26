@@ -13,6 +13,7 @@ extern "C" {
 #endif
 
     extern void uart_init(void);
+    extern void uart_tx_isr(void);
 
 
 #ifdef	__cplusplus

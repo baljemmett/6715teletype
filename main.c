@@ -26,6 +26,12 @@
 #include "uart.h"
 #define _XTAL_FREQ 18432000
 
+void interrupt isr(void)
+{
+    if (TXIF)
+        uart_tx_isr();
+}
+
 int main(int argc, char* argv[])
 {
     ANSELA = 0;
@@ -42,11 +48,15 @@ int main(int argc, char* argv[])
     
     while (1)
     {
+        LATA0 = 1;
         for (unsigned char c = '0'; c <= '9'; c++)
         {
-            LATA0 ^= 1;
+            LATA1 = 1;
             putchar(c);
-            __delay_ms(10);
+            LATA1 = 0;
         }
+        LATA0 = 0;
+        GIE = 1;
+        __delay_ms(20);
     }
 }
