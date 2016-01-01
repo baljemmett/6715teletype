@@ -24,10 +24,18 @@
 
 #include <stdio.h>
 #include "uart.h"
+#include "keyboard.h"
 #define _XTAL_FREQ 18432000
 
 void interrupt isr(void)
 {
+    //
+    //  Must call the keyboard ISR first to handle snooping on the keyboard
+    //  scanning, as it's fast enough that we only have ~70 cycles to catch it!
+    //
+    if (IOCIF)
+        keyboard_isr();
+    
     if (TXIF)
         uart_tx_isr();
 }
@@ -37,9 +45,16 @@ int main(int argc, char* argv[])
     ANSELA = 0;
     ANSELB = 0;
     ANSELC = 0;
+    ANSELD = 0;
+    ANSELE = 0;
     
     uart_init();
+    keyboard_init();
     
+    TRISA0 = 0;
+    TRISA1 = 0;
+    
+#if 0
     TRISA0 = 0;
     TRISA1 = 0;
     
@@ -59,4 +74,19 @@ int main(int argc, char* argv[])
         GIE = 1;
         __delay_ms(20);
     }
+#else
+    GIE = 1;
+    
+    while (1)
+    {
+        keyevent_t event = KEY_NONE;
+        keyboard_update();
+        
+        while ((event = keyboard_get_next_event()) != KEY_NONE)
+        {
+            putchar(keyboard_get_event_key(event));
+            putchar(keyboard_is_down_event(event) ? 1 : 0);
+        }
+    }
+#endif
 }

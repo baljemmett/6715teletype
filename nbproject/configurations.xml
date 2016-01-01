@@ -21,6 +21,8 @@
     </logicalFolder>
     <itemPath>uart.h</itemPath>
     <itemPath>uart.c</itemPath>
+    <itemPath>keyboard.c</itemPath>
+    <itemPath>keyboard.h</itemPath>
   </logicalFolder>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
