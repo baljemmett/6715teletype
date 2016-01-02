@@ -89,7 +89,7 @@ keyevent_t keyboard_get_next_event(void)
 
 inline bit keyboard_is_down_event(const keyevent_t nEvent)
 {
-    return (nEvent & 0x80) == 0x80;
+    return (nEvent & 0x80) == 0x00;
 }
 
 inline keyid_t keyboard_get_event_key(const keyevent_t nEvent)
