@@ -4,6 +4,8 @@
 #include "keyboard.h"
 
 #define _XTAL_FREQ 18432000
+#define KEYSTROKE_GAP   20
+#define KEYSTROKE_TICKS 30
 
 //
 //  Table of internal key IDs based on the order of the bits that represent
@@ -453,7 +455,7 @@ static void keyboard_send_key(uint8_t row, uint8_t col0, uint8_t col1)
     char interrupts_enabled = keyboard_complete_scan_disable_interrupts();
 
     g_inject1row   = 0;     // row 0 never matches, so this disables injection
-    g_inject1ticks = 30;    // until we're done setting up the values.
+    g_inject1ticks = KEYSTROKE_TICKS; // until we're done setting up the values.
     g_inject1col0  = col0;
     g_inject1col1  = col1;
     
@@ -477,7 +479,7 @@ static void keyboard_wait_sent(void)
     while (g_inject1ticks)
         ;
     
-    __delay_ms(20);
+    __delay_ms(KEYSTROKE_GAP);
 }
 
 void keyboard_send_balj(void)
