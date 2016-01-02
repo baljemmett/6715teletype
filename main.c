@@ -27,15 +27,12 @@
 #include "keyboard.h"
 #define _XTAL_FREQ 18432000
 
-void interrupt isr(void)
+//
+// This is the main ISR, handling the slowest-latency interrupts; the
+// actual ISR is in keyboard.c to ensure the tight timing isn't disturbed.
+//
+void main_isr(void)
 {
-    //
-    //  Must call the keyboard ISR first to handle snooping on the keyboard
-    //  scanning, as it's fast enough that we only have ~70 cycles to catch it!
-    //
-    if (IOCIF)
-        keyboard_isr();
-    
     if (TXIF)
         uart_tx_isr();
 }
@@ -110,6 +107,11 @@ int main(int argc, char* argv[])
         
         while ((event = keyboard_get_next_event()) != KEY_NONE)
         {
+            if (keyboard_get_event_key(event) == KEY_LOCK && ! keyboard_is_down_event(event))
+            {
+                keyboard_send_b();
+            }
+            
             putchar(keyboard_get_event_key(event));
             putchar(keyboard_is_down_event(event) ? 1 : 0);
         }
