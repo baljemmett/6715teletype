@@ -54,6 +54,41 @@ int main(int argc, char* argv[])
     TRISA0 = 0;
     TRISA1 = 0;
     
+#if 0   // scan timing tests
+    TRISA0 = 0;
+    TRISA1 = 0;
+    
+    LATA0 = 0;
+    LATA1 = 0;
+    
+    uint8_t target = ~1;
+    uint8_t ticks  = 0;
+    
+    TMR0CS = 0;
+    PSA    = 0;
+    PS0    = 1;
+    PS1    = 1;
+    PS2    = 1;
+    TMR0   = 0;
+    TMR0IF = 0;
+    
+    while (1)
+    {
+        LATA0 = (PORTB == 0xff);
+        LATA1 = (PORTB == target);
+        
+        if (TMR0IF == 1)
+        {
+            TMR0IF = 0;
+            
+            if (++ticks == 0)
+            {
+                target = ~((~target) * 2);
+            }
+        }
+    }
+#endif
+    
 #if 0
     TRISA0 = 0;
     TRISA1 = 0;
