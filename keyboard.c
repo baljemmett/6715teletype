@@ -235,7 +235,7 @@ _asm
     IORWF   _g_inject1col1, W       ; settings on the same port...
     MOVWF   TRISC & 0x7f
             
-    FCALL   _keyboard_isr           ; call medium-latency keyboard ISR
+;    FCALL   _keyboard_isr           ; call medium-latency keyboard ISR
     
     MOVF    _g_inject1ticks, W      ; if there are ticks left on the counter...
     BTFSS   STATUS, 2
