@@ -108,7 +108,7 @@ extern "C" {
     extern inline bit keyboard_is_down_event(const keyevent_t nEvent);
     extern inline keyid_t keyboard_get_event_key(const keyevent_t nEvent);
     
-    extern void keyboard_send_b(void);
+    extern void keyboard_send_balj(void);
 
 #ifdef	__cplusplus
 }

@@ -448,14 +448,14 @@ static char keyboard_complete_scan_disable_interrupts()
     return enabled;
 }
 
-void keyboard_send_b(void)
+static void keyboard_send_key(uint8_t row, uint8_t col0, uint8_t col1)
 {
     char interrupts_enabled = keyboard_complete_scan_disable_interrupts();
 
     g_inject1row   = 0;     // row 0 never matches, so this disables injection
-    g_inject1ticks = 26;    // until we're done setting up the values.
-    g_inject1col0  = 0xff;
-    g_inject1col1  = 0x2e;
+    g_inject1ticks = 30;    // until we're done setting up the values.
+    g_inject1col0  = col0;
+    g_inject1col1  = col1;
     
     do
     {
@@ -467,7 +467,27 @@ void keyboard_send_b(void)
     }
     while (PORTB != 0xff);  // but make sure it has before continuing
     
-    g_inject1row   = 0x7f;
+    g_inject1row = row;
     
     GIE = interrupts_enabled;
+}
+
+static void keyboard_wait_sent(void)
+{
+    while (g_inject1ticks)
+        ;
+    
+    __delay_ms(20);
+}
+
+void keyboard_send_balj(void)
+{
+    keyboard_send_key(0x7f, 0xff, 0x2e);
+    keyboard_wait_sent();
+    keyboard_send_key(0xfd, 0xfd, 0x3e);
+    keyboard_wait_sent();
+    keyboard_send_key(0xfd, 0xdf, 0x3e);
+    keyboard_wait_sent();
+    keyboard_send_key(0xfd, 0xff, 0x1e);
+    keyboard_wait_sent();
 }

@@ -107,13 +107,13 @@ int main(int argc, char* argv[])
         
         while ((event = keyboard_get_next_event()) != KEY_NONE)
         {
-            if (keyboard_get_event_key(event) == KEY_LOCK && ! keyboard_is_down_event(event))
-            {
-                keyboard_send_b();
-            }
-            
             putchar(keyboard_get_event_key(event));
             putchar(keyboard_is_down_event(event) ? 1 : 0);
+            
+            if (keyboard_get_event_key(event) == KEY_LOCK && ! keyboard_is_down_event(event))
+            {
+                keyboard_send_balj();
+            }
         }
     }
 #endif
