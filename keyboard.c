@@ -91,12 +91,12 @@ keyevent_t keyboard_get_next_event(void)
 
 inline bit keyboard_is_down_event(const keyevent_t nEvent)
 {
-    return (nEvent & 0x80) == 0x00;
+    return (nEvent & KEY_RELEASED) == 0x00;
 }
 
 inline keyid_t keyboard_get_event_key(const keyevent_t nEvent)
 {
-    return nEvent & 0x7f;
+    return nEvent & ~KEY_RELEASED;
 }
 
 //
@@ -315,7 +315,7 @@ static void keyboard_update_row_state(uint8_t row, uint8_t columns[2])
             if (g_aKeystates[nKey])
             {
                 g_aKeystates[nKey] = 0;
-                keyboard_queue_event(g_aKeyIDs[nKey] | 0x80);
+                keyboard_queue_event(g_aKeyIDs[nKey] | KEY_RELEASED);
             }
         }
     }
@@ -341,7 +341,7 @@ static void keyboard_update_row_state(uint8_t row, uint8_t columns[2])
             if (g_aKeystates[nKey])
             {
                 g_aKeystates[nKey] = 0;
-                keyboard_queue_event(g_aKeyIDs[nKey] | 0x80);
+                keyboard_queue_event(g_aKeyIDs[nKey] | KEY_RELEASED);
             }
         }
     }

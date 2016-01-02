@@ -95,6 +95,8 @@ extern "C" {
         KEY_LINESPACE,
                 
         KEY_MAX,
+                
+        KEY_RELEASED = 0x80,
                
     } keyid_t;
     
