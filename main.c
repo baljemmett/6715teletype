@@ -54,13 +54,10 @@ int main(int argc, char* argv[])
     TRISA0 = 0;
     TRISA1 = 0;
     
+    LATA0  = 0;
+    LATA1  = 0;
+    
 #if 0   // scan timing tests
-    TRISA0 = 0;
-    TRISA1 = 0;
-    
-    LATA0 = 0;
-    LATA1 = 0;
-    
     uint8_t target = ~1;
     uint8_t ticks  = 0;
     
@@ -90,12 +87,6 @@ int main(int argc, char* argv[])
 #endif
     
 #if 0
-    TRISA0 = 0;
-    TRISA1 = 0;
-    
-    LATA0 = 0;
-    LATA1 = 0;
-    
     while (1)
     {
         LATA0 = 1;
