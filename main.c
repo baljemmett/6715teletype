@@ -25,6 +25,8 @@
 #include <stdio.h>
 #include "uart.h"
 #include "keyboard.h"
+#include "terminal.h"
+
 #define _XTAL_FREQ 18432000
 
 //
@@ -47,6 +49,7 @@ int main(int argc, char* argv[])
     
     uart_init();
     keyboard_init();
+    terminal_init();
     
     TRISA0 = 0;
     TRISA1 = 0;
@@ -102,31 +105,8 @@ int main(int argc, char* argv[])
     
     while (1)
     {
-        keyevent_t event = KEY_NONE;
         keyboard_update();
-        
-        while ((event = keyboard_get_next_event()) != KEY_NONE)
-        {
-            putchar(keyboard_get_event_key(event));
-            putchar(keyboard_is_down_event(event) ? 1 : 0);
-            
-            if (keyboard_get_event_key(event) == KEY_SPACE && ! keyboard_is_down_event(event))
-            {
-                keyboard_send_ascii('H');
-                keyboard_send_ascii('e');
-                keyboard_send_ascii('l');
-                keyboard_send_ascii('l');
-                keyboard_send_ascii('o');
-                keyboard_send_ascii(' ');
-                keyboard_send_ascii('w');
-                keyboard_send_ascii('o');
-                keyboard_send_ascii('r');
-                keyboard_send_ascii('l');
-                keyboard_send_ascii('d');
-                keyboard_send_ascii('!');
-                keyboard_send_ascii('\n');
-            }
-        }
+        terminal_process();
     }
 #endif
 }

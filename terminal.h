@@ -12,6 +12,9 @@
 extern "C" {
 #endif
 
+    extern void terminal_init(void);
+    extern void terminal_process(void);
+
 #ifdef	__cplusplus
 }
 #endif

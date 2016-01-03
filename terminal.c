@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "terminal.h"
 #include "keyboard.h"
 
@@ -45,6 +46,22 @@ static const keyid_t g_aAsciiKeys[128] = {
 
 };
 
+static char g_achKeys[KEY_MAX | KEY_SHIFTED] = { 0 };
+
+static void terminal_init_ascii_table(void)
+{
+    for (char ch = 0; ch < 128; ch++)
+    {
+        keyid_t nKey = g_aAsciiKeys[ch];
+        
+        if ((nKey & ~KEY_SHIFTED) < KEY_MAX)
+        {
+            if (g_achKeys[nKey] == 0)
+                g_achKeys[nKey] = ch;
+        }
+    }
+}
+
 static void terminal_inject_ascii(char ch)
 {
     keyid_t nKey = (ch < 128) ? g_aAsciiKeys[ch] : KEY_NONE;
@@ -61,5 +78,83 @@ static void terminal_inject_ascii(char ch)
     else
     {
         keyboard_send_keystroke(nKey);
+    }
+}
+
+static void terminal_keyevent(keyevent_t nEvent)
+{
+    static bit s_bIsShifted = 0;
+    static bit s_bIsCode    = 0;
+    
+    keyid_t nKey = keyboard_get_event_key(nEvent);
+    
+    //
+    //  Shifted state follows motion of Shift key exactly.
+    //
+    if (nKey == KEY_SHIFT)
+    {
+        s_bIsShifted = keyboard_is_down_event(nEvent);
+        return;
+    }
+    
+    //
+    //  Shifted state latches on as soon as the Lock key is pressed.
+    //
+    if (nKey == KEY_LOCK)
+    {
+        if (keyboard_is_down_event(nEvent))
+            s_bIsShifted = 1;
+        
+        return;
+    }
+
+    //
+    //  Track the Code-shift state as well, following the Code key motion
+    //
+    if (nKey == KEY_CODE)
+    {
+        s_bIsCode = keyboard_is_down_event(nEvent);
+        return;
+    }
+    
+    //
+    //  Ignore all keys pressed when Code is down, and all releases (for now)
+    //
+    if (s_bIsCode || ! keyboard_is_down_event(nEvent))
+        return;
+    
+    //
+    //  Drop invalid keys (just in case)
+    //
+    if (nKey == KEY_NONE || nKey == KEY_UNKNOWN || nKey >= KEY_MAX)
+        return;
+    
+    //
+    //  Set the shift bit if keyboard state requires...
+    //
+    if (s_bIsShifted)
+        nKey |= KEY_SHIFTED;
+    
+    //
+    //  ... and spit out the keystroke if it maps to an ASCII character.
+    //
+    char ch = g_achKeys[nKey];
+    
+    if (ch != 0)
+        putchar(ch);
+}
+
+void terminal_init(void)
+{
+    terminal_init_ascii_table();
+}
+
+void terminal_process(void)
+{
+    keyevent_t nEvent;
+    
+    while ((nEvent = keyboard_get_next_event()) != KEY_NONE)
+    {
+        terminal_keyevent(nEvent);
     }
 }
