@@ -37,6 +37,8 @@ void main_isr(void)
 {
     if (TXIF)
         uart_tx_isr();
+    if (RCIF)
+        uart_rx_isr();
 }
 
 int main(int argc, char* argv[])

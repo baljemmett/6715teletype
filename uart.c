@@ -6,6 +6,9 @@
 #if BUFFER_SIZE > 0
 static volatile char achTxBuffer[BUFFER_SIZE];
 static volatile unsigned char idxTxRead = 0, idxTxWrite = 0;
+
+static volatile char achRxBuffer[BUFFER_SIZE];
+static volatile unsigned char idxRxRead = 0, idxRxWrite = 0;
 #endif
 
 void uart_init(void)
@@ -23,6 +26,10 @@ void uart_init(void)
     
     TRISC6 = 0;
     
+#if BUFFER_SIZE > 0
+    RCIE = 1;
+#endif
+    
     PEIE = 1;
 }
 
@@ -36,7 +43,15 @@ void uart_tx_isr(void)
     if (idxTxRead == idxTxWrite)
         TXIE = 0;
 #endif
-    
+}
+
+void uart_rx_isr(void)
+{
+#if BUFFER_SIZE > 0
+    achRxBuffer[idxRxWrite++] = RCREG;
+    if (idxRxWrite == BUFFER_SIZE)
+        idxRxWrite = 0;
+#endif   
 }
 
 void putch(char c)
@@ -58,5 +73,28 @@ void putch(char c)
         ;
     
     TXREG = c;
+#endif
+}
+
+char uart_get_rx_byte(void)
+{
+#if BUFFER_SIZE > 0
+    if (idxRxRead == idxRxWrite)
+        return 0;
+    
+    char ch = achRxBuffer[idxRxRead++];
+    
+    if (idxRxRead == BUFFER_SIZE)
+        idxRxRead = 0;
+    
+    return ch;
+#else
+    if (! RCIF)
+        return 0;
+    
+    if (FERR)
+        ;   // we dropped a byte, oops.
+    
+    return RCREG;
 #endif
 }
