@@ -325,6 +325,9 @@ static void keyboard_update_row_state(uint8_t row, uint8_t columns[2])
     keyid_t nKey = row * 13;
     uint8_t nBit;
     
+    if (columns[0] == 0xff && (columns[1] & 0x3e) == 0x3e)
+        return; // ghosted row, ignore entirely
+    
     for (nBit = 0x01; nBit; nKey++, nBit += nBit)
     {
         if (columns[0] & nBit)
