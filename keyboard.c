@@ -5,7 +5,9 @@
 
 #define _XTAL_FREQ 18432000
 #define KEYSTROKE_GAP   20
-#define KEYSTROKE_TICKS 30
+#define KEYSTROKE_TICKS 10
+
+#define SCANS_PER_TICK  17
 
 //
 //  Table of internal key IDs based on the order of the bits that represent
@@ -226,18 +228,12 @@ void keyboard_isr(void)
 
 //
 //  These values are used by the fast ISR to inject keystrokes; ticks is the
-//  number of scan cycles the keystroke should be injected for, row is the
-//  raw value of the row strobe port corresponding to the keystroke, and col0/1
-//  contain the same raw values as should be seen in the column outputs
-//  (i.e. a 0 means the key is pressed, a 1 means the driver should be hi-Z)
+//  number of scan cycles the keystroke should be injected for, and the data
+//  array is a sparsely-populated table of TRISx data.  For a given value of
+//  the row strobes, data[strobes] contains TRISD and data[~strobes] TRISC.
 //
-//  N.B.: these MUST be in the 0xN70-0xN7f range so they can be accessed without
-//  switching memory banks; this saves a few cycles in the ISR.
-//
-static volatile uint8_t g_inject_ticks @ 0x070;
-static volatile uint8_t g_inject_row   @ 0x071;
-static volatile uint8_t g_inject_col0  @ 0x072;
-static volatile uint8_t g_inject_col1  @ 0x073;
+static volatile uint8_t g_inject_ticks;
+static volatile uint8_t g_inject_data[256] @ 0x2000;
 
 //
 //  The fast half of the keyboard ISR is here; it's placed as the main ISR
@@ -256,55 +252,24 @@ _asm
     BTFSS   INTCON, 0               ; in core registers, no need to select bank
     GOTO    done                    ; bit 0 = IOCIF; have the scan pins changed?
 
+    MOVLW   HIGH(_g_inject_data)    ; prepare to access data table indirectly...
+    MOVWF   FSR0H
     BANKSEL PORTB
     MOVF    PORTB, W
-    XORWF    _g_inject_row, W       ; all in common RAM, no need to select bank
+    MOVWF   FSR0L                   ; using strobe bits as index
+    BANKSEL TRISD
+    MOVF    INDF0, W                ; entry at [PORTB] is first half of columns
+    MOVWF   BANKMASK(TRISD)
+    COMF    FSR0L, F                ; invert index
+    MOVF    INDF0, W
+    MOVWF   BANKMASK(TRISC)         ; entry at [~PORTB] is second half
+    
+    BANKSEL _g_inject_ticks         ; decrement tick counter if not already 0
+    MOVF    BANKMASK(_g_inject_ticks), F
     BTFSS   STATUS, 2
-    GOTO    not_inject_row
-    
-    BANKSEL TRISD                   ; inject the first low byte of column data
-    MOVF    _g_inject_col0, W       ; by turning on the relevant pin drivers
-    MOVWF   TRISD & 0x7f
-            
-    MOVLW   0xc1                    ; inject the high bits of column data,
-    ANDWF   TRISC & 0x7f, W         ; without breaking any existing tristate
-    IORWF   _g_inject_col1, W       ; settings on the same port...
-    MOVWF   TRISC & 0x7f
-            
-;    FCALL   _keyboard_isr           ; call medium-latency keyboard ISR
-    
-    MOVF    _g_inject_ticks, W      ; if there are ticks left on the counter...
-    BTFSS   STATUS, 2
-    DECFSZ  _g_inject_ticks, F      ; decrement and clean up if now out of time
-    GOTO    check_overrun           ; otherwise leave injection data in place
-    
-    MOVLW   0xff                    ; all columns to hi-Z...
-    MOVWF   _g_inject_col0
-    MOVLW   0x3e
-    MOVWF   _g_inject_col1
-    CLRF    _g_inject_row           ; and no rows matter
-    GOTO    check_overrun
-    
-not_inject_row:
-    BANKSEL TRISD                   ; this isn't our row, so all columns to hi-Z
-    MOVLW   0xff
-    MOVWF   TRISD & 0x7f
-    MOVLW   0xbf                    ; TRISC6 is low (for UART Tx)
-    MOVWF   TRISC & 0x7f
+    DECF    BANKMASK(_g_inject_ticks), F
             
     FCALL _keyboard_isr             ; call medium-latency keyboard ISR
-
-check_overrun:                      ; make sure we haven't taken too long
-    BANKSEL PORTB
-    INCF    PORTB, W                ; are any strobes active?
-    BTFSS   STATUS, 2               
-    GOTO    done                    ; yes, so don't worry
-
-    BANKSEL TRISD                   ; no, so all columns to hi-Z
-    MOVLW   0xff
-    MOVWF   TRISD & 0x7f
-    MOVLW   0xbf                    ; TRISC6 is low (for UART Tx)
-    MOVWF   TRISC & 0x7f
 
 done:
 _endasm
@@ -312,6 +277,36 @@ _endasm
     
     main_isr();
     asm("RETFIE");
+}
+
+//
+//  Given a key's scan data, set it to be injected by the fast ISR.
+//
+static void keyboard_set_key_down(uint8_t row, uint8_t col0, uint8_t col1)
+{
+    //
+    //  Make sure the TRISC data we're about to set only affects the
+    //  pins associated with the keyboard, not the rest of the port (UART!))
+    //
+    col1 |= 0x81;
+    
+    g_inject_data[row]        &= col0;
+    g_inject_data[row ^ 0xff] &= col1;
+}
+
+//
+//  Given a key's scan data, set it to not be injected by the fast ISR.
+//
+static void keyboard_set_key_up(uint8_t row, uint8_t col0, uint8_t col1)
+{
+    //
+    //  Make sure the TRISC data we're about to set only affects the
+    //  pins associated with the keyboard, not the rest of the port (UART!))
+    //
+    col1 |= ~0x3e;
+    
+    g_inject_data[row]        |= ~col0;
+    g_inject_data[row ^ 0xff] |= ~col1;
 }
 
 //
@@ -412,6 +407,27 @@ void keyboard_update(void)
 }
 
 //
+//  Initialise injection data; each entry will be 0xff (the TRISD inactive
+//  value, for safety) except those that correspond to the inverse of valid
+//  strobe patterns, which will be 0xbf (the TRISC inactive value).)
+//
+static void keyboard_init_injection_data(void)
+{
+    for (char idx = 255; idx; idx--)
+    {
+        g_inject_data[idx] = 0xff;
+    }
+    
+    for (char idx = 0x01; idx; idx += idx)
+    {
+        g_inject_data[idx] = 0xbf;
+    }
+    
+    g_inject_data[0] = 0xbf;
+    g_inject_ticks = 0;    
+}
+
+//
 //  Initialize the keyboard driver
 //
 void keyboard_init(void)
@@ -435,9 +451,10 @@ void keyboard_init(void)
     LATC   = 0x00;
     
     //
-    //  Get our key tables in order...
+    //  Get our data structures in order...
     //
     keyboard_init_scan_table();
+    keyboard_init_injection_data();
     
     //
     //  We want an interrupt every time a pin goes low (-> a row is scanned)
@@ -454,11 +471,6 @@ void keyboard_init(void)
         ;
     
     __delay_ms(4);
-    
-    g_inject_ticks = 0;
-    g_inject_row   = 0;
-    g_inject_col0  = 0xff;
-    g_inject_col1  = 0x3e;
     
     g_ISRdata.pending = 0xff;
     IOCIF = 0;
@@ -486,11 +498,6 @@ static void keyboard_send_key(uint8_t row, uint8_t col0, uint8_t col1)
 {
     char interrupts_enabled = keyboard_complete_scan_disable_interrupts();
 
-    g_inject_row   = 0;     // row 0 never matches, so this disables injection
-    g_inject_ticks = KEYSTROKE_TICKS; // until we're done setting up the values.
-    g_inject_col0  = col0;
-    g_inject_col1  = col1;
-    
     do
     {
         // wait for scanning to be idle before selecting the target row
@@ -501,17 +508,17 @@ static void keyboard_send_key(uint8_t row, uint8_t col0, uint8_t col1)
     }
     while (PORTB != 0xff);  // but make sure it has before continuing
     
-    g_inject_row = row;
+    keyboard_set_key_down(row, col0, col1);
+    g_inject_ticks = KEYSTROKE_TICKS * SCANS_PER_TICK;
     
     IOCBF = 0;
     IOCBN = interrupts_enabled;
     IOCBP = interrupts_enabled;
-}
-
-static void keyboard_wait_sent(void)
-{
+    
     while (g_inject_ticks)
         ;
+    
+    keyboard_set_key_up(row, col0, col1);
     
     __delay_ms(KEYSTROKE_GAP);
 }
@@ -519,13 +526,9 @@ static void keyboard_wait_sent(void)
 void keyboard_send_balj(void)
 {
     keyboard_send_key(0x7f, 0xff, 0x2e);
-    keyboard_wait_sent();
     keyboard_send_key(0xfd, 0xfd, 0x3e);
-    keyboard_wait_sent();
     keyboard_send_key(0xfd, 0xdf, 0x3e);
-    keyboard_wait_sent();
     keyboard_send_key(0xfd, 0xff, 0x1e);
-    keyboard_wait_sent();
 }
 
 void keyboard_send_keystroke(keyid_t nKey)
@@ -541,6 +544,4 @@ void keyboard_send_keystroke(keyid_t nKey)
     keyboard_send_key(nRow,
                       g_aKeyScans[nKey].columns[0],
                       g_aKeyScans[nKey].columns[1]);
-    
-    keyboard_wait_sent();
 }
