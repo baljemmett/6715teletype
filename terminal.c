@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "terminal.h"
 #include "keyboard.h"
+#include "uart.h"
 
 static const keyid_t g_aAsciiKeys[128] = {
     
@@ -152,9 +153,15 @@ void terminal_init(void)
 void terminal_process(void)
 {
     keyevent_t nEvent;
+    char       ch;
     
     while ((nEvent = keyboard_get_next_event()) != KEY_NONE)
     {
         terminal_keyevent(nEvent);
+    }
+    
+    while ((ch = uart_get_rx_byte()) != 0)
+    {
+        terminal_inject_ascii(ch);
     }
 }
