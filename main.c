@@ -35,9 +35,9 @@
 //
 void main_isr(void)
 {
-    if (TXIF)
+    if (TXIF && TXIE)
         uart_tx_isr();
-    if (RCIF)
+    if (RCIF && RCIE)
         uart_rx_isr();
 }
 
