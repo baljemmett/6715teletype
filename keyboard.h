@@ -112,7 +112,7 @@ extern "C" {
     extern inline keyid_t keyboard_get_event_key(const keyevent_t nEvent);
     
     extern void keyboard_send_balj(void);
-    extern void keyboard_send_ascii(char c);
+    extern void keyboard_send_keystroke(keyid_t nKey);
 
 #ifdef	__cplusplus
 }
