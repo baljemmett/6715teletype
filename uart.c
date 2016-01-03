@@ -47,6 +47,9 @@ void uart_tx_isr(void)
 
 void uart_rx_isr(void)
 {
+    LATA0 = 1;
+    LATA0 = 0;
+    
 #if BUFFER_SIZE > 0
     achRxBuffer[idxRxWrite++] = RCREG;
     if (idxRxWrite == BUFFER_SIZE)

@@ -392,8 +392,6 @@ void keyboard_update(void)
     if (g_ISRdata.pending)
         return;
     
-    LATA0 = 1;
-    
     //
     //  Now work through the accumulated scan data by rows, looking for changes;
     //  since we haven't yet reset the pending row flags, the ISR won't change
@@ -406,8 +404,6 @@ void keyboard_update(void)
         g_ISRdata.scan_state[nRow][0] = 0xff;
         g_ISRdata.scan_state[nRow][1] = 0x3e;
     }
-    
-    LATA0 = 0;
     
     //
     //  Now allow the ISR to accumulate scan data once more.
