@@ -1,7 +1,7 @@
 #include <xc.h>
 #include "uart.h"
 
-#define BUFFER_SIZE 0
+#define BUFFER_SIZE 16
 
 #if BUFFER_SIZE > 0
 static volatile char achTxBuffer[BUFFER_SIZE];
