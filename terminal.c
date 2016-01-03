@@ -72,9 +72,7 @@ static void terminal_inject_ascii(char ch)
     
     if (nKey & KEY_SHIFTED)
     {
-        keyboard_send_keystroke(KEY_LOCK);
-        keyboard_send_keystroke(nKey & ~KEY_SHIFTED);
-        keyboard_send_keystroke(KEY_SHIFT);
+        keyboard_send_keychord(KEY_SHIFT, nKey & ~KEY_SHIFTED);
     }
     else
     {
