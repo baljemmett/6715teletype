@@ -97,6 +97,7 @@ extern "C" {
         KEY_MAX,
                 
         KEY_RELEASED = 0x80,
+        KEY_SHIFTED  = 0x80,
                
     } keyid_t;
     
@@ -111,6 +112,7 @@ extern "C" {
     extern inline keyid_t keyboard_get_event_key(const keyevent_t nEvent);
     
     extern void keyboard_send_balj(void);
+    extern void keyboard_send_ascii(char c);
 
 #ifdef	__cplusplus
 }

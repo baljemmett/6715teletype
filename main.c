@@ -112,7 +112,19 @@ int main(int argc, char* argv[])
             
             if (keyboard_get_event_key(event) == KEY_SPACE && ! keyboard_is_down_event(event))
             {
-                keyboard_send_balj();
+                keyboard_send_ascii('H');
+                keyboard_send_ascii('e');
+                keyboard_send_ascii('l');
+                keyboard_send_ascii('l');
+                keyboard_send_ascii('o');
+                keyboard_send_ascii(' ');
+                keyboard_send_ascii('w');
+                keyboard_send_ascii('o');
+                keyboard_send_ascii('r');
+                keyboard_send_ascii('l');
+                keyboard_send_ascii('d');
+                keyboard_send_ascii('!');
+                keyboard_send_ascii('\n');
             }
         }
     }

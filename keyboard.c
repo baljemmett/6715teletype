@@ -53,6 +53,45 @@ static const keyid_t g_aKeyIDs[] = {
     KEY_CODE, KEY_SPACE, KEY_ERASE, KEY_B, KEY_N,  
 };
 
+typedef struct
+{
+    uint8_t row;
+    uint8_t columns[2];
+} keyscan_t;
+
+static keyscan_t g_aKeyScans[KEY_MAX] = { 0 };
+
+static void keyboard_init_scan_table(void)
+{
+    uint8_t nKeyCode = 0;
+    
+    for (uint8_t nRow = 0; nRow < 8; nRow++)
+    {
+        for (uint8_t nColumn = 0; nColumn < 13; nColumn++, nKeyCode++)
+        {
+            keyid_t nKey = g_aKeyIDs[nKeyCode];
+            
+            g_aKeyScans[nKey].row        = 0xff;
+            g_aKeyScans[nKey].columns[0] = 0xff;
+            g_aKeyScans[nKey].columns[1] = 0x3e;
+                
+            if (nKey != KEY_NONE && nKey != KEY_UNKNOWN && nKey < KEY_MAX)
+            {
+                g_aKeyScans[nKey].row &= ~(1<<nRow);
+                
+                if (nColumn < 8)
+                {
+                    g_aKeyScans[nKey].columns[0] &= ~(1<<nColumn);
+                }
+                else
+                {
+                    g_aKeyScans[nKey].columns[1] &= ~(1<<(nColumn-7));
+                }
+            }
+        }
+    }
+}
+
 //
 //  The keyboard event queue contains one record for each key-down or key-up
 //  event, containing the up/down event flag in the top bit and the internal
@@ -405,6 +444,11 @@ void keyboard_init(void)
     LATC   = 0x00;
     
     //
+    //  Get our key tables in order...
+    //
+    keyboard_init_scan_table();
+    
+    //
     //  We want an interrupt every time a pin goes low (-> a row is scanned)
     //
     IOCBN = 0xff;
@@ -492,4 +536,84 @@ void keyboard_send_balj(void)
     keyboard_wait_sent();
     keyboard_send_key(0xfd, 0xff, 0x1e);
     keyboard_wait_sent();
+}
+
+static void keyboard_send_key_lookup(keyid_t nKey)
+{
+    if (nKey >= KEY_MAX)
+        return;
+    
+    uint8_t nRow = g_aKeyScans[nKey].row;
+    
+    if (nRow == 0 || nRow == 0xff)
+        return;
+    
+    keyboard_send_key(nRow,
+                      g_aKeyScans[nKey].columns[0],
+                      g_aKeyScans[nKey].columns[1]);
+    
+    keyboard_wait_sent();
+}
+
+static const keyid_t g_aAsciiKeys[128] = {
+    
+    /* 00-03 */ KEY_NONE, KEY_NONE, KEY_NONE, KEY_NONE, 
+    /* 04-07 */ KEY_NONE, KEY_NONE, KEY_NONE, KEY_NONE, 
+    /* 08-0B */ KEY_BACKSPC, KEY_TAB, KEY_CRTN, KEY_NONE, 
+    /* 0C-0F */ KEY_NONE, KEY_CRTN, KEY_NONE, KEY_NONE, 
+
+    /* 10-13 */ KEY_NONE, KEY_NONE, KEY_NONE, KEY_NONE, 
+    /* 14-17 */ KEY_NONE, KEY_NONE, KEY_NONE, KEY_NONE, 
+    /* 18-1B */ KEY_NONE, KEY_NONE, KEY_NONE, KEY_NONE, 
+    /* 1C-1F */ KEY_NONE, KEY_NONE, KEY_NONE, KEY_NONE, 
+
+    /* 20-23 */ KEY_SPACE,              KEY_1 | KEY_SHIFTED,    KEY_2 | KEY_SHIFTED,        KEY_MU | KEY_SHIFTED, 
+    /* 24-27 */ KEY_4 | KEY_SHIFTED,    KEY_5 | KEY_SHIFTED,    KEY_6 | KEY_SHIFTED,        KEY_7 | KEY_SHIFTED, 
+    /* 28-2B */ KEY_8 | KEY_SHIFTED,    KEY_9 | KEY_SHIFTED,    KEY_COLON | KEY_SHIFTED,    KEY_SEMICOLON | KEY_SHIFTED, 
+    /* 2C-2F */ KEY_COMMA,              KEY_DASH,               KEY_FULLSTOP,               KEY_SLASH, 
+
+    /* 30-33 */ KEY_0,      KEY_1,                  KEY_2,                      KEY_3, 
+    /* 34-37 */ KEY_4,      KEY_5,                  KEY_6,                      KEY_7, 
+    /* 38-3B */ KEY_8,      KEY_9,                  KEY_COLON,                  KEY_SEMICOLON, 
+    /* 3C-3F */ KEY_ANGLES, KEY_0 | KEY_SHIFTED,    KEY_ANGLES | KEY_SHIFTED,   KEY_SLASH | KEY_SHIFTED, 
+
+    /* 40-43 */ KEY_AT, KEY_A | KEY_SHIFTED, KEY_B | KEY_SHIFTED, KEY_C | KEY_SHIFTED, 
+    /* 44-47 */ KEY_D | KEY_SHIFTED,  KEY_E | KEY_SHIFTED, KEY_F | KEY_SHIFTED, KEY_G | KEY_SHIFTED, 
+    /* 48-4B */ KEY_H | KEY_SHIFTED,  KEY_I | KEY_SHIFTED, KEY_J | KEY_SHIFTED, KEY_K | KEY_SHIFTED, 
+    /* 4C-4F */ KEY_L | KEY_SHIFTED,  KEY_M | KEY_SHIFTED, KEY_N | KEY_SHIFTED, KEY_O | KEY_SHIFTED, 
+
+    /* 50-53 */ KEY_P | KEY_SHIFTED, KEY_Q | KEY_SHIFTED, KEY_R | KEY_SHIFTED, KEY_S | KEY_SHIFTED, 
+    /* 54-57 */ KEY_T | KEY_SHIFTED, KEY_U | KEY_SHIFTED, KEY_V | KEY_SHIFTED, KEY_W | KEY_SHIFTED, 
+    /* 58-5B */ KEY_X | KEY_SHIFTED, KEY_Y | KEY_SHIFTED, KEY_Z | KEY_SHIFTED, KEY_BRACKETS | KEY_SHIFTED, 
+    /* 5C-5F */ KEY_AT | KEY_SHIFTED, KEY_BRACKETS, KEY_CENTS | KEY_SHIFTED, KEY_DASH | KEY_SHIFTED, 
+
+    /* 60-63 */ KEY_7 | KEY_SHIFTED, KEY_A, KEY_B, KEY_C, 
+    /* 64-67 */ KEY_D, KEY_E, KEY_F, KEY_G, 
+    /* 68-6B */ KEY_H, KEY_I, KEY_J, KEY_K, 
+    /* 6C-6F */ KEY_L, KEY_M, KEY_N, KEY_O, 
+
+    /* 70-73 */ KEY_P,  KEY_Q, KEY_R, KEY_S, 
+    /* 74-77 */ KEY_T,  KEY_U, KEY_V, KEY_W, 
+    /* 78-7B */ KEY_X,  KEY_Y, KEY_Z, KEY_BRACKETS | KEY_SHIFTED, 
+    /* 7C-7F */ KEY_MU, KEY_BRACKETS, KEY_CENTS, KEY_ERASE, 
+
+};
+
+void keyboard_send_ascii(char c)
+{
+    keyid_t nKey = (c < 128) ? g_aAsciiKeys[c] : KEY_NONE;
+    
+    if (nKey == KEY_NONE)
+        return;
+    
+    if (nKey & KEY_SHIFTED)
+    {
+        keyboard_send_key_lookup(KEY_LOCK);
+        keyboard_send_key_lookup(nKey & ~KEY_SHIFTED);
+        keyboard_send_key_lookup(KEY_SHIFT);
+    }
+    else
+    {
+        keyboard_send_key_lookup(nKey);
+    }
 }
