@@ -467,7 +467,7 @@ void keyboard_init(void)
 
 static char keyboard_complete_scan_disable_interrupts()
 {
-    char enabled = GIE;
+    char enabled = IOCBN;
     
     if (enabled)
     {
@@ -476,7 +476,9 @@ static char keyboard_complete_scan_disable_interrupts()
             ;
     }
     
-    GIE = 0;
+    IOCBN = 0;
+    IOCBP = 0;
+    IOCBF = 0;
     return enabled;
 }
 
@@ -501,7 +503,9 @@ static void keyboard_send_key(uint8_t row, uint8_t col0, uint8_t col1)
     
     g_inject_row = row;
     
-    GIE = interrupts_enabled;
+    IOCBF = 0;
+    IOCBN = interrupts_enabled;
+    IOCBP = interrupts_enabled;
 }
 
 static void keyboard_wait_sent(void)
