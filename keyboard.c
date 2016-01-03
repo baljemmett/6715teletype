@@ -6,6 +6,8 @@
 #define _XTAL_FREQ 18432000
 #define KEYSTROKE_GAP   20
 #define KEYSTROKE_TICKS 10
+#define KEYCHORD_BEFORE  3
+#define KEYCHORD_AFTER   2
 
 #define SCANS_PER_TICK  17
 
@@ -494,6 +496,47 @@ static char keyboard_complete_scan_disable_interrupts()
     return enabled;
 }
 
+static void keyboard_send_key_chord(uint8_t row_1, uint8_t col0_1, uint8_t col1_1,
+                                    uint8_t row_2, uint8_t col0_2, uint8_t col1_2)
+{
+    char interrupts_enabled = keyboard_complete_scan_disable_interrupts();
+
+    do
+    {
+        // wait for scanning to be idle before selecting the target row
+        while (PORTB == 0xff)
+            ;   // now we're in a scan pulse...
+        
+        __delay_ms(4);  // ... so this should land us in the dead period
+    }
+    while (PORTB != 0xff);  // but make sure it has before continuing
+    
+    keyboard_set_key_down(row_1, col0_1, col1_1);
+    g_inject_ticks = (KEYSTROKE_TICKS + KEYCHORD_BEFORE + KEYCHORD_AFTER)
+                     * SCANS_PER_TICK;
+    
+    IOCBF = 0;
+    IOCBN = interrupts_enabled;
+    IOCBP = interrupts_enabled;
+    
+    while (g_inject_ticks > (KEYSTROKE_TICKS + KEYCHORD_AFTER) * SCANS_PER_TICK)
+        ;
+    
+    keyboard_set_key_down(row_2, col0_2, col1_2);
+    
+    while (g_inject_ticks > KEYCHORD_AFTER * SCANS_PER_TICK)
+        ;
+    
+    keyboard_set_key_up(row_2, col0_2, col1_2);
+    
+    while (g_inject_ticks)
+        ;
+    
+    keyboard_set_key_up(row_1, col0_1, col1_1);
+    
+    __delay_ms(KEYSTROKE_GAP);
+}
+
 static void keyboard_send_key(uint8_t row, uint8_t col0, uint8_t col1)
 {
     char interrupts_enabled = keyboard_complete_scan_disable_interrupts();
@@ -544,4 +587,23 @@ void keyboard_send_keystroke(keyid_t nKey)
     keyboard_send_key(nRow,
                       g_aKeyScans[nKey].columns[0],
                       g_aKeyScans[nKey].columns[1]);
+}
+
+void keyboard_send_keychord(keyid_t nHoldKey, keyid_t nKey)
+{
+    if (nKey >= KEY_MAX || nHoldKey >= KEY_MAX)
+        return;
+    
+    uint8_t nHoldRow = g_aKeyScans[nHoldKey].row;
+    uint8_t nRow     = g_aKeyScans[nKey].row;
+    
+    if (nRow == 0 || nRow == 0xff || nHoldRow == 0 || nHoldRow == 0xff)
+        return;
+    
+    keyboard_send_key_chord(nHoldRow,
+                            g_aKeyScans[nHoldKey].columns[0],
+                            g_aKeyScans[nHoldKey].columns[1],
+                            nRow,
+                            g_aKeyScans[nKey].columns[0],
+                            g_aKeyScans[nKey].columns[1]);
 }

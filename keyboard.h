@@ -113,6 +113,7 @@ extern "C" {
     
     extern void keyboard_send_balj(void);
     extern void keyboard_send_keystroke(keyid_t nKey);
+    extern void keyboard_send_keychord(keyid_t nHoldKey, keyid_t nKey);
 
 #ifdef	__cplusplus
 }
