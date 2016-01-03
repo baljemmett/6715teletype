@@ -1,13 +1,16 @@
 #include <xc.h>
 #include "uart.h"
 
-#define BUFFER_SIZE 16
+#define TX_BUFFER_SIZE 16
+#define RX_BUFFER_SIZE 128
 
-#if BUFFER_SIZE > 0
-static volatile char achTxBuffer[BUFFER_SIZE];
+#if TX_BUFFER_SIZE > 0
+static volatile char achTxBuffer[TX_BUFFER_SIZE];
 static volatile unsigned char idxTxRead = 0, idxTxWrite = 0;
+#endif
 
-static volatile char achRxBuffer[BUFFER_SIZE];
+#if RX_BUFFER_SIZE > 0
+static volatile char achRxBuffer[RX_BUFFER_SIZE];
 static volatile unsigned char idxRxRead = 0, idxRxWrite = 0;
 #endif
 
@@ -27,7 +30,7 @@ void uart_init(void)
     
     TRISC6 = 0;
     
-#if BUFFER_SIZE > 0
+#if RX_BUFFER_SIZE > 0
     RCIE = 1;
 #endif
     
@@ -36,9 +39,9 @@ void uart_init(void)
 
 void uart_tx_isr(void)
 {
-#if BUFFER_SIZE > 0
+#if TX_BUFFER_SIZE > 0
     TXREG = achTxBuffer[idxTxRead++];
-    if (idxTxRead == BUFFER_SIZE)
+    if (idxTxRead == TX_BUFFER_SIZE)
         idxTxRead = 0;
     
     if (idxTxRead == idxTxWrite)
@@ -51,16 +54,16 @@ void uart_rx_isr(void)
     LATA0 = 1;
     LATA0 = 0;
     
-#if BUFFER_SIZE > 0
+#if RX_BUFFER_SIZE > 0
     achRxBuffer[idxRxWrite++] = RCREG;
-    if (idxRxWrite == BUFFER_SIZE)
+    if (idxRxWrite == RX_BUFFER_SIZE)
         idxRxWrite = 0;
 #endif   
 }
 
 void putch(char c)
 {
-#if BUFFER_SIZE > 0
+#if TX_BUFFER_SIZE > 0
     if (idxTxRead == idxTxWrite && TXIF)
     {
         TXREG = c;
@@ -68,7 +71,7 @@ void putch(char c)
     }
     
     achTxBuffer[idxTxWrite++] = c;
-    if (idxTxWrite == BUFFER_SIZE)
+    if (idxTxWrite == TX_BUFFER_SIZE)
         idxTxWrite = 0;
     
     TXIE = 1;
@@ -82,13 +85,13 @@ void putch(char c)
 
 char uart_get_rx_byte(void)
 {
-#if BUFFER_SIZE > 0
+#if RX_BUFFER_SIZE > 0
     if (idxRxRead == idxRxWrite)
         return 0;
     
     char ch = achRxBuffer[idxRxRead++];
     
-    if (idxRxRead == BUFFER_SIZE)
+    if (idxRxRead == RX_BUFFER_SIZE)
         idxRxRead = 0;
     
     return ch;
