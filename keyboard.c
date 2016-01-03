@@ -239,11 +239,6 @@ static volatile uint8_t g_inject1row   @ 0x071;
 static volatile uint8_t g_inject1col0  @ 0x072;
 static volatile uint8_t g_inject1col1  @ 0x073;
 
-static volatile uint8_t g_inject2ticks @ 0x074;
-static volatile uint8_t g_inject2row   @ 0x075;
-static volatile uint8_t g_inject2col0  @ 0x076;
-static volatile uint8_t g_inject2col1  @ 0x077;
-
 //
 //  The fast half of the keyboard ISR is here; it's placed as the main ISR
 //  for the entire application, and calls back to the medium/slow ISR defined
@@ -468,11 +463,6 @@ void keyboard_init(void)
     g_inject1row   = 0;
     g_inject1col0  = 0xff;
     g_inject1col1  = 0x3e;
-    
-    g_inject2ticks = 0;
-    g_inject2row   = 0;
-    g_inject2col0  = 0xff;
-    g_inject2col1  = 0x3e;
     
     g_ISRdata.pending = 0xff;
     IOCIF = 0;
