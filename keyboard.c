@@ -234,10 +234,10 @@ void keyboard_isr(void)
 //  N.B.: these MUST be in the 0xN70-0xN7f range so they can be accessed without
 //  switching memory banks; this saves a few cycles in the ISR.
 //
-static volatile uint8_t g_inject1ticks @ 0x070;
-static volatile uint8_t g_inject1row   @ 0x071;
-static volatile uint8_t g_inject1col0  @ 0x072;
-static volatile uint8_t g_inject1col1  @ 0x073;
+static volatile uint8_t g_inject_ticks @ 0x070;
+static volatile uint8_t g_inject_row   @ 0x071;
+static volatile uint8_t g_inject_col0  @ 0x072;
+static volatile uint8_t g_inject_col1  @ 0x073;
 
 //
 //  The fast half of the keyboard ISR is here; it's placed as the main ISR
@@ -258,34 +258,34 @@ _asm
 
     BANKSEL PORTB
     MOVF    PORTB, W
-    XORWF    _g_inject1row, W       ; all in common RAM, no need to select bank
+    XORWF    _g_inject_row, W       ; all in common RAM, no need to select bank
     BTFSS   STATUS, 2
-    GOTO    not_inject1
+    GOTO    not_inject_row
     
     BANKSEL TRISD                   ; inject the first low byte of column data
-    MOVF    _g_inject1col0, W       ; by turning on the relevant pin drivers
+    MOVF    _g_inject_col0, W       ; by turning on the relevant pin drivers
     MOVWF   TRISD & 0x7f
             
     MOVLW   0xc1                    ; inject the high bits of column data,
     ANDWF   TRISC & 0x7f, W         ; without breaking any existing tristate
-    IORWF   _g_inject1col1, W       ; settings on the same port...
+    IORWF   _g_inject_col1, W       ; settings on the same port...
     MOVWF   TRISC & 0x7f
             
 ;    FCALL   _keyboard_isr           ; call medium-latency keyboard ISR
     
-    MOVF    _g_inject1ticks, W      ; if there are ticks left on the counter...
+    MOVF    _g_inject_ticks, W      ; if there are ticks left on the counter...
     BTFSS   STATUS, 2
-    DECFSZ  _g_inject1ticks, F      ; decrement and clean up if now out of time
+    DECFSZ  _g_inject_ticks, F      ; decrement and clean up if now out of time
     GOTO    check_overrun           ; otherwise leave injection data in place
     
     MOVLW   0xff                    ; all columns to hi-Z...
-    MOVWF   _g_inject1col0
+    MOVWF   _g_inject_col0
     MOVLW   0x3e
-    MOVWF   _g_inject1col1
-    CLRF    _g_inject1row           ; and no rows matter
+    MOVWF   _g_inject_col1
+    CLRF    _g_inject_row           ; and no rows matter
     GOTO    check_overrun
     
-not_inject1:
+not_inject_row:
     BANKSEL TRISD                   ; this isn't our row, so all columns to hi-Z
     MOVLW   0xff
     MOVWF   TRISD & 0x7f
@@ -459,10 +459,10 @@ void keyboard_init(void)
     
     __delay_ms(4);
     
-    g_inject1ticks = 0;
-    g_inject1row   = 0;
-    g_inject1col0  = 0xff;
-    g_inject1col1  = 0x3e;
+    g_inject_ticks = 0;
+    g_inject_row   = 0;
+    g_inject_col0  = 0xff;
+    g_inject_col1  = 0x3e;
     
     g_ISRdata.pending = 0xff;
     IOCIF = 0;
@@ -488,10 +488,10 @@ static void keyboard_send_key(uint8_t row, uint8_t col0, uint8_t col1)
 {
     char interrupts_enabled = keyboard_complete_scan_disable_interrupts();
 
-    g_inject1row   = 0;     // row 0 never matches, so this disables injection
-    g_inject1ticks = KEYSTROKE_TICKS; // until we're done setting up the values.
-    g_inject1col0  = col0;
-    g_inject1col1  = col1;
+    g_inject_row   = 0;     // row 0 never matches, so this disables injection
+    g_inject_ticks = KEYSTROKE_TICKS; // until we're done setting up the values.
+    g_inject_col0  = col0;
+    g_inject_col1  = col1;
     
     do
     {
@@ -503,14 +503,14 @@ static void keyboard_send_key(uint8_t row, uint8_t col0, uint8_t col1)
     }
     while (PORTB != 0xff);  // but make sure it has before continuing
     
-    g_inject1row = row;
+    g_inject_row = row;
     
     GIE = interrupts_enabled;
 }
 
 static void keyboard_wait_sent(void)
 {
-    while (g_inject1ticks)
+    while (g_inject_ticks)
         ;
     
     __delay_ms(KEYSTROKE_GAP);
