@@ -162,6 +162,13 @@ void terminal_process(void)
     
     while ((ch = uart_get_rx_byte()) != 0)
     {
-        terminal_inject_ascii(ch);
+        static bit s_bSwallowLf = 0;
+        
+        if (! (ch == '\n' && s_bSwallowLf))
+        {
+            terminal_inject_ascii(ch);
+        }
+        
+        s_bSwallowLf = (ch == '\r');
     }
 }
