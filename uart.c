@@ -23,6 +23,7 @@ void uart_init(void)
     SYNC  = 0;
     SPEN  = 1;
     TXEN  = 1;
+    CREN  = 1;
     
     TRISC6 = 0;
     
