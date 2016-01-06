@@ -499,6 +499,14 @@ static char keyboard_complete_scan_disable_interrupts()
     return enabled;
 }
 
+static void keyboard_wait_ticks(uint8_t nTicks)
+{
+    g_inject_ticks = nTicks * SCANS_PER_TICK;
+    
+    while (g_inject_ticks)
+        ;
+}
+
 static void keyboard_send_key_chord(uint8_t row_1, uint8_t col0_1, uint8_t col1_1,
                                     uint8_t row_2, uint8_t col0_2, uint8_t col1_2)
 {
@@ -514,60 +522,30 @@ static void keyboard_send_key_chord(uint8_t row_1, uint8_t col0_1, uint8_t col1_
     }
     while (PORTB != 0xff);  // but make sure it has before continuing
     
-    keyboard_set_key_down(row_1, col0_1, col1_1);
-    g_inject_ticks = (KEYSTROKE_TICKS + KEYCHORD_BEFORE + KEYCHORD_AFTER)
-                     * SCANS_PER_TICK;
-    
     IOCBF = 0;
     IOCBN = interrupts_enabled;
     IOCBP = interrupts_enabled;
-    
-    while (g_inject_ticks > (KEYSTROKE_TICKS + KEYCHORD_AFTER) * SCANS_PER_TICK)
-        ;
+
+    if (row_1)
+    {
+        keyboard_set_key_down(row_1, col0_1, col1_1);    
+        keyboard_wait_ticks(KEYCHORD_BEFORE);
+    }
     
     keyboard_set_key_down(row_2, col0_2, col1_2);
-    
-    while (g_inject_ticks > KEYCHORD_AFTER * SCANS_PER_TICK)
-        ;
-    
+    keyboard_wait_ticks(KEYSTROKE_TICKS);
     keyboard_set_key_up(row_2, col0_2, col1_2);
-    
-    while (g_inject_ticks)
-        ;
-    
-    keyboard_set_key_up(row_1, col0_1, col1_1);
-    
-    __delay_ms(KEYSTROKE_GAP);
-}
 
-static void keyboard_send_key(uint8_t row, uint8_t col0, uint8_t col1)
-{
-    char interrupts_enabled = keyboard_complete_scan_disable_interrupts();
-
-    do
+    if (row_1)
     {
-        // wait for scanning to be idle before selecting the target row
-        while (PORTB == 0xff)
-            ;   // now we're in a scan pulse...
-        
-        __delay_ms(4);  // ... so this should land us in the dead period
+        keyboard_wait_ticks(KEYCHORD_AFTER);
+        keyboard_set_key_up(row_1, col0_1, col1_1);
     }
-    while (PORTB != 0xff);  // but make sure it has before continuing
-    
-    keyboard_set_key_down(row, col0, col1);
-    g_inject_ticks = KEYSTROKE_TICKS * SCANS_PER_TICK;
-    
-    IOCBF = 0;
-    IOCBN = interrupts_enabled;
-    IOCBP = interrupts_enabled;
-    
-    while (g_inject_ticks)
-        ;
-    
-    keyboard_set_key_up(row, col0, col1);
     
     __delay_ms(KEYSTROKE_GAP);
 }
+
+#define keyboard_send_key(row, col0, col1) keyboard_send_key_chord(0, 0, 0, row, col0, col1)
 
 void keyboard_send_balj(void)
 {
