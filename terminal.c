@@ -82,8 +82,10 @@ static void terminal_inject_ascii(char ch)
 
 static void terminal_keyevent(keyevent_t nEvent)
 {
-    static bit s_bIsShifted = 0;
-    static bit s_bIsCode    = 0;
+    static bit s_bIsLocked   = 0;
+    static bit s_bIsLockDown = 0;
+    static bit s_bIsShifted  = 0;
+    static bit s_bIsCode     = 0;
     
     keyid_t nKey = keyboard_get_event_key(nEvent);
     
@@ -93,6 +95,7 @@ static void terminal_keyevent(keyevent_t nEvent)
     if (nKey == KEY_SHIFT)
     {
         s_bIsShifted = keyboard_is_down_event(nEvent);
+        s_bIsLocked  = s_bIsShifted ? 0 : s_bIsLockDown;        
         return;
     }
     
@@ -101,9 +104,8 @@ static void terminal_keyevent(keyevent_t nEvent)
     //
     if (nKey == KEY_LOCK)
     {
-        if (keyboard_is_down_event(nEvent))
-            s_bIsShifted = 1;
-        
+        s_bIsLocked   = s_bIsShifted ? 0 : 1;
+        s_bIsLockDown = keyboard_is_down_event(nEvent);
         return;
     }
 
@@ -131,7 +133,7 @@ static void terminal_keyevent(keyevent_t nEvent)
     //
     //  Set the shift bit if keyboard state requires...
     //
-    if (s_bIsShifted)
+    if (s_bIsShifted || s_bIsLocked)
         nKey |= KEY_SHIFTED;
     
     //
