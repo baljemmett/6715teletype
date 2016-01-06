@@ -77,11 +77,36 @@ static void terminal_inject_ascii(char ch)
     
     if (nKey & KEY_SHIFTED)
     {
-        keyboard_send_keychord(KEY_SHIFT, nKey & ~KEY_SHIFTED);
+        if (g_bIsShifted || g_bIsLocked)
+        {
+            keyboard_send_keystroke(nKey & ~KEY_SHIFTED);
+        }
+        else
+        {
+            keyboard_send_keychord(KEY_SHIFT, nKey & ~KEY_SHIFTED);
+        }
     }
     else
     {
-        keyboard_send_keystroke(nKey);
+        if (g_bIsLocked)
+        {
+            keyboard_send_keystroke(KEY_SHIFT);
+            keyboard_send_keystroke(nKey);
+            keyboard_send_keystroke(KEY_LOCK);
+        }
+        else if (g_bIsShifted)
+        {
+            //
+            //  Problem - can't lop typist's finger off to remove shift state!
+            //  For now, send as-is and whatever.  In future, maybe stop and
+            //  flash attention light or something?
+            //
+            keyboard_send_keystroke(nKey);
+        }
+        else
+        {
+            keyboard_send_keystroke(nKey);
+        }
     }
 }
 
