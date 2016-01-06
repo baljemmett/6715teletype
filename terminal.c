@@ -49,6 +49,11 @@ static const keyid_t g_aAsciiKeys[128] = {
 
 static char g_achKeys[KEY_MAX | KEY_SHIFTED] = { 0 };
 
+static bit g_bIsLocked   = 0;
+static bit g_bIsLockDown = 0;
+static bit g_bIsShifted  = 0;
+static bit g_bIsCode     = 0;
+
 static void terminal_init_ascii_table(void)
 {
     for (char ch = 0; ch < 128; ch++)
@@ -82,11 +87,6 @@ static void terminal_inject_ascii(char ch)
 
 static void terminal_keyevent(keyevent_t nEvent)
 {
-    static bit s_bIsLocked   = 0;
-    static bit s_bIsLockDown = 0;
-    static bit s_bIsShifted  = 0;
-    static bit s_bIsCode     = 0;
-    
     keyid_t nKey = keyboard_get_event_key(nEvent);
     
     //
@@ -94,8 +94,8 @@ static void terminal_keyevent(keyevent_t nEvent)
     //
     if (nKey == KEY_SHIFT)
     {
-        s_bIsShifted = keyboard_is_down_event(nEvent);
-        s_bIsLocked  = s_bIsShifted ? 0 : s_bIsLockDown;        
+        g_bIsShifted = keyboard_is_down_event(nEvent);
+        g_bIsLocked  = g_bIsShifted ? 0 : g_bIsLockDown;        
         return;
     }
     
@@ -104,8 +104,8 @@ static void terminal_keyevent(keyevent_t nEvent)
     //
     if (nKey == KEY_LOCK)
     {
-        s_bIsLocked   = s_bIsShifted ? 0 : 1;
-        s_bIsLockDown = keyboard_is_down_event(nEvent);
+        g_bIsLocked   = g_bIsShifted ? 0 : 1;
+        g_bIsLockDown = keyboard_is_down_event(nEvent);
         return;
     }
 
@@ -114,14 +114,14 @@ static void terminal_keyevent(keyevent_t nEvent)
     //
     if (nKey == KEY_CODE)
     {
-        s_bIsCode = keyboard_is_down_event(nEvent);
+        g_bIsCode = keyboard_is_down_event(nEvent);
         return;
     }
     
     //
     //  Ignore all keys pressed when Code is down, and all releases (for now)
     //
-    if (s_bIsCode || ! keyboard_is_down_event(nEvent))
+    if (g_bIsCode || ! keyboard_is_down_event(nEvent))
         return;
     
     //
@@ -133,7 +133,7 @@ static void terminal_keyevent(keyevent_t nEvent)
     //
     //  Set the shift bit if keyboard state requires...
     //
-    if (s_bIsShifted || s_bIsLocked)
+    if (g_bIsShifted || g_bIsLocked)
         nKey |= KEY_SHIFTED;
     
     //
