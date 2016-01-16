@@ -4,12 +4,12 @@
 #include "keyboard.h"
 
 #define _XTAL_FREQ 18432000
-#define KEYSTROKE_GAP   20
-#define KEYSTROKE_TICKS 10
-#define KEYCHORD_BEFORE  3
+#define KEYSTROKE_GAP   30      // milliseconds between keystrokes
+#define KEYSTROKE_TICKS 10      // scan ticks for a keystroke
+#define KEYCHORD_BEFORE  3      // scan ticks either side of a chorded keystroke
 #define KEYCHORD_AFTER   2
 
-#define SCANS_PER_TICK  17
+#define SCANS_PER_TICK  17      // number of individual scan pulses in a train
 
 //
 //  Table of internal key IDs based on the order of the bits that represent
