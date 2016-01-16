@@ -54,6 +54,11 @@ static bit g_bIsLockDown = 0;
 static bit g_bIsShifted  = 0;
 static bit g_bIsCode     = 0;
 
+static uint8_t g_cchPosition = 0;
+static bit g_bAutoReturn     = 0;
+static uint8_t g_cchMargin   = 0;
+static uint8_t g_cchPitch    = 0;
+
 static void terminal_init_ascii_table(void)
 {
     for (char ch = 0; ch < 128; ch++)
@@ -65,6 +70,77 @@ static void terminal_init_ascii_table(void)
             if (g_achKeys[nKey] == 0)
                 g_achKeys[nKey] = ch;
         }
+    }
+}
+
+static void terminal_auto_return_toggled(void)
+{
+    g_bAutoReturn ^= 1;
+}
+
+static void terminal_pitch_cycled(void)
+{
+    switch (g_cchPitch)
+    {
+        case 10:
+            g_cchPitch  = 12;
+            g_cchMargin = 78 - g_cchPitch;
+            break;
+            
+        case 12:
+            g_cchPitch  = 15;
+            g_cchMargin = 97 - g_cchPitch; 
+            break;
+            
+        case 15:
+        default:
+            g_cchPitch  = 10;
+            g_cchMargin = 65 - g_cchPitch;
+            break;
+    }
+}
+
+static void terminal_char_printed(uint8_t bCanBreak)
+{
+    if (g_cchPosition < 165)
+    {
+        g_cchPosition++;
+    }
+
+    //
+    //  Will the typewriter have inserted an automatic return here?
+    //
+    if (bCanBreak && g_bAutoReturn && g_cchPosition >= g_cchMargin)
+    {
+        g_cchPosition = 0;
+    }
+}
+
+static void terminal_handle_motion(keyid_t nKey)
+{
+    switch (nKey)
+    {
+        case KEY_BACKSPC:
+        case KEY_ERASE:
+            if (g_cchPosition > 0)
+            {
+                g_cchPosition--;
+            }
+            break;
+            
+        case KEY_CRTN:
+        case KEY_MAR_RTN:
+            g_cchPosition = 0;
+            break;
+            
+        case KEY_SPACE:
+        case KEY_TAB:
+            terminal_char_printed(1);
+            break;
+            
+        default:
+            terminal_char_printed(0);
+            break;
     }
 }
 
@@ -108,6 +184,8 @@ static void terminal_inject_ascii(char ch)
             keyboard_send_keystroke(nKey);
         }
     }
+    
+    terminal_handle_motion(nKey & ~KEY_SHIFTED);
 }
 
 static void terminal_keyevent(keyevent_t nEvent)
@@ -144,9 +222,41 @@ static void terminal_keyevent(keyevent_t nEvent)
     }
     
     //
-    //  Ignore all keys pressed when Code is down, and all releases (for now)
+    //  Handle or ignore any known Code-key combinations
     //
-    if (g_bIsCode || ! keyboard_is_down_event(nEvent))
+    if (g_bIsCode)
+    {
+        switch (nKey)
+        {
+            case KEY_P:
+                terminal_pitch_cycled();
+                return;
+                
+            case KEY_R:
+                terminal_auto_return_toggled();
+                return;
+                
+            case KEY_Q:
+            case KEY_T:
+            case KEY_U:
+            case KEY_AT:
+            case KEY_3:
+            case KEY_6:
+            case KEY_F:
+            case KEY_J:
+            case KEY_TAB:
+            case KEY_COLON:
+            case KEY_INDICES:
+            case KEY_C:
+            case KEY_BACKSPC:
+                return;
+        }
+    }
+    
+    //
+    //  Only key-down events can generate keystrokes at the moment
+    //
+    if (! keyboard_is_down_event(nEvent))
         return;
     
     //
@@ -168,11 +278,14 @@ static void terminal_keyevent(keyevent_t nEvent)
     
     if (ch != 0)
         putchar(ch);
+    
+    terminal_handle_motion(nKey & ~KEY_SHIFTED);
 }
 
 void terminal_init(void)
 {
     terminal_init_ascii_table();
+    terminal_pitch_cycled();
 }
 
 void terminal_process(void)
