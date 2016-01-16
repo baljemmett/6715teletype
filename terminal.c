@@ -1,7 +1,11 @@
+#include <xc.h>
 #include <stdio.h>
 #include "terminal.h"
 #include "keyboard.h"
 #include "uart.h"
+
+#define _XTAL_FREQ 18432000
+#define RETURN_DELAY 1000
 
 static const keyid_t g_aAsciiKeys[128] = {
     
@@ -112,6 +116,7 @@ static void terminal_char_printed(uint8_t bCanBreak)
     //
     if (bCanBreak && g_bAutoReturn && g_cchPosition >= g_cchMargin)
     {
+        __delay_ms(RETURN_DELAY);        
         g_cchPosition = 0;
     }
 }
@@ -130,6 +135,11 @@ static void terminal_handle_motion(keyid_t nKey)
             
         case KEY_CRTN:
         case KEY_MAR_RTN:
+            if (g_cchPosition)
+            {
+                __delay_ms(RETURN_DELAY);
+            }
+            
             g_cchPosition = 0;
             break;
             
