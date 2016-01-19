@@ -88,18 +88,18 @@ static void terminal_pitch_cycled(void)
     {
         case 10:
             g_cchPitch  = 12;
-            g_cchMargin = 78 - g_cchPitch;
+            g_cchMargin = 80 - g_cchPitch;
             break;
             
         case 12:
             g_cchPitch  = 15;
-            g_cchMargin = 97 - g_cchPitch; 
+            g_cchMargin = 100 - g_cchPitch; 
             break;
             
         case 15:
         default:
             g_cchPitch  = 10;
-            g_cchMargin = 65 - g_cchPitch;
+            g_cchMargin = 67 - g_cchPitch;
             break;
     }
 }
@@ -114,7 +114,7 @@ static void terminal_char_printed(uint8_t bCanBreak)
     //
     //  Will the typewriter have inserted an automatic return here?
     //
-    if (bCanBreak && g_bAutoReturn && g_cchPosition >= g_cchMargin)
+    if (bCanBreak && g_bAutoReturn && g_cchPosition > g_cchMargin)
     {
         __delay_ms(RETURN_DELAY);        
         g_cchPosition = 0;
