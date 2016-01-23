@@ -88,12 +88,12 @@ static void terminal_pitch_cycled(void)
     {
         case 10:
             g_cchPitch  = 12;
-            g_cchMargin = 80 - g_cchPitch;
+            g_cchMargin = 82 - g_cchPitch;
             break;
             
         case 12:
             g_cchPitch  = 15;
-            g_cchMargin = 100 - g_cchPitch; 
+            g_cchMargin = 105 - g_cchPitch; 
             break;
             
         case 15:
