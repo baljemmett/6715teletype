@@ -7,6 +7,16 @@
 #define _XTAL_FREQ 18432000
 #define RETURN_DELAY 1000
 
+//
+//  'X-units per inch'; we use 120 because 10/12/15cpi all evenly divide it,
+//  even for half-character widths (for the half-backspace key or centred text)
+//
+#define XPI                     120
+#define POWERUP_CPI             10
+#define POWERUP_LEFT_MARGIN     10
+#define POWERUP_RIGHT_MARGIN    75
+#define MARGIN_BELL_CHARS       8
+
 static const keyid_t g_aAsciiKeys[128] = {
     
     /* 00-03 */ KEY_NONE, KEY_NONE, KEY_NONE, KEY_NONE, 
@@ -58,10 +68,13 @@ static bit g_bIsLockDown = 0;
 static bit g_bIsShifted  = 0;
 static bit g_bIsCode     = 0;
 
-static uint8_t g_cchPosition = 0;
-static bit g_bAutoReturn     = 0;
-static uint8_t g_cchMargin   = 0;
-static uint8_t g_cchPitch    = 0;
+static uint8_t  g_cxCharacter   =                            XPI  / POWERUP_CPI;
+static uint16_t g_cxPosition    = (POWERUP_LEFT_MARGIN     * XPI) / POWERUP_CPI;
+static uint16_t g_cxLeftMargin  = (POWERUP_LEFT_MARGIN     * XPI) / POWERUP_CPI;
+static uint16_t g_cxRightMargin = (POWERUP_RIGHT_MARGIN    * XPI) / POWERUP_CPI;
+static uint16_t g_cxBell        = ((POWERUP_RIGHT_MARGIN - MARGIN_BELL_CHARS)
+                                                           * XPI) / POWERUP_CPI;
+static bit      g_bAutoReturn   = 0;
 
 static void terminal_init_ascii_table(void)
 {
@@ -84,40 +97,39 @@ static void terminal_auto_return_toggled(void)
 
 static void terminal_pitch_cycled(void)
 {
-    switch (g_cchPitch)
+    switch (g_cxCharacter)
     {
-        case 10:
-            g_cchPitch  = 12;
-            g_cchMargin = 82 - g_cchPitch;
+        case XPI / 10:
+            g_cxCharacter  = XPI / 12;
             break;
             
-        case 12:
-            g_cchPitch  = 15;
-            g_cchMargin = 105 - g_cchPitch; 
+        case XPI / 12:
+            g_cxCharacter  = XPI / 15;
             break;
             
-        case 15:
+        case XPI / 15:
         default:
-            g_cchPitch  = 10;
-            g_cchMargin = 67 - g_cchPitch;
+            g_cxCharacter  = XPI / 10;
             break;
     }
+    
+    g_cxBell = g_cxRightMargin - (MARGIN_BELL_CHARS * g_cxCharacter);
 }
 
 static void terminal_char_printed(uint8_t bCanBreak)
 {
-    if (g_cchPosition < 165)
+    if (g_cxPosition < (11 * XPI))
     {
-        g_cchPosition++;
+        g_cxPosition += g_cxCharacter;
     }
 
     //
     //  Will the typewriter have inserted an automatic return here?
     //
-    if (bCanBreak && g_bAutoReturn && g_cchPosition > g_cchMargin)
+    if (bCanBreak && g_bAutoReturn && g_cxPosition > g_cxBell)
     {
         __delay_ms(RETURN_DELAY);        
-        g_cchPosition = 0;
+        g_cxPosition = g_cxLeftMargin;
     }
 }
 
@@ -127,20 +139,20 @@ static void terminal_handle_motion(keyid_t nKey)
     {
         case KEY_BACKSPC:
         case KEY_ERASE:
-            if (g_cchPosition > 0)
+            if (g_cxPosition > g_cxLeftMargin)
             {
-                g_cchPosition--;
+                g_cxPosition -= g_cxCharacter;
             }
             break;
             
         case KEY_CRTN:
         case KEY_MAR_RTN:
-            if (g_cchPosition)
+            if (g_cxPosition > g_cxLeftMargin)
             {
                 __delay_ms(RETURN_DELAY);
             }
             
-            g_cchPosition = 0;
+            g_cxPosition = g_cxLeftMargin;
             break;
             
         case KEY_SPACE:
@@ -232,6 +244,12 @@ static void terminal_keyevent(keyevent_t nEvent)
     }
     
     //
+    //  Only key-down events can generate keystrokes at the moment
+    //
+    if (! keyboard_is_down_event(nEvent))
+        return;
+    
+    //
     //  Handle or ignore any known Code-key combinations
     //
     if (g_bIsCode)
@@ -264,12 +282,6 @@ static void terminal_keyevent(keyevent_t nEvent)
     }
     
     //
-    //  Only key-down events can generate keystrokes at the moment
-    //
-    if (! keyboard_is_down_event(nEvent))
-        return;
-    
-    //
     //  Drop invalid keys (just in case)
     //
     if (nKey == KEY_NONE || nKey == KEY_UNKNOWN || nKey >= KEY_MAX)
@@ -295,7 +307,6 @@ static void terminal_keyevent(keyevent_t nEvent)
 void terminal_init(void)
 {
     terminal_init_ascii_table();
-    terminal_pitch_cycled();
 }
 
 void terminal_process(void)
