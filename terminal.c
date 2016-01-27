@@ -67,6 +67,8 @@ static bit g_bIsLocked   = 0;
 static bit g_bIsLockDown = 0;
 static bit g_bIsShifted  = 0;
 static bit g_bIsCode     = 0;
+static bit g_bCodePress  = 0;
+static bit g_bSendCtrl   = 0;
 
 static uint8_t  g_cxCharacter   =                            XPI  / POWERUP_CPI;
 static uint16_t g_cxPosition    = (POWERUP_LEFT_MARGIN     * XPI) / POWERUP_CPI;
@@ -250,7 +252,31 @@ static void terminal_keyevent(keyevent_t nEvent)
     //
     if (nKey == KEY_CODE)
     {
-        g_bIsCode = keyboard_is_down_event(nEvent);
+        if (keyboard_is_down_event(nEvent))
+        {
+            //
+            //  Code went down, so start looking for any other keys...
+            //
+            g_bIsCode    = 1;
+            g_bCodePress = 1;
+        }
+        else
+        {
+            //
+            //  Code went back up...
+            //
+            g_bIsCode = 0;
+            
+            //
+            //  ... and if no other keys were pressed, it's a Ctrl composition
+            //
+            if (g_bCodePress)
+            {
+                g_bCodePress = 0;
+                g_bSendCtrl  = 1;
+            }
+        }
+        
         return;
     }
     
@@ -259,6 +285,11 @@ static void terminal_keyevent(keyevent_t nEvent)
     //
     if (! keyboard_is_down_event(nEvent))
         return;
+    
+    //
+    //  A non-shift/Code key was pressed, so clear the Code-pressed flag
+    //
+    g_bCodePress = 0;
     
     //
     //  Handle or ignore any known Code-key combinations
@@ -305,14 +336,43 @@ static void terminal_keyevent(keyevent_t nEvent)
         nKey |= KEY_SHIFTED;
     
     //
+    //  ... track the carriage position...
+    //
+    terminal_handle_motion(nKey & ~KEY_SHIFTED);
+
+    //
     //  ... and spit out the keystroke if it maps to an ASCII character.
     //
     char ch = g_achKeys[nKey];
     
+    if (g_bSendCtrl)
+    {
+        g_bSendCtrl = 0;
+        
+        if (ch >= 'A' && ch <= 'Z')
+        {
+            ch = (ch - 'A') + 1;
+            
+            keyboard_send_keystroke(KEY_BACKSPC);
+            terminal_handle_motion(KEY_BACKSPC);
+            
+            keyboard_send_keychord(KEY_SHIFT, KEY_CENTS);
+            terminal_handle_motion(KEY_CENTS);
+        }
+        else if (ch >= 'a' && ch <= 'z')
+        {
+            ch = (ch - 'a') + 1;
+            
+            keyboard_send_keystroke(KEY_BACKSPC);
+            terminal_handle_motion(KEY_BACKSPC);
+            
+            keyboard_send_keychord(KEY_SHIFT, KEY_CENTS);
+            terminal_handle_motion(KEY_CENTS);
+        }
+    }
+
     if (ch != 0)
         putchar(ch);
-    
-    terminal_handle_motion(nKey & ~KEY_SHIFTED);
 }
 
 void terminal_init(void)
