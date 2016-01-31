@@ -390,6 +390,15 @@ void terminal_process(void)
         terminal_keyevent(nEvent);
     }
     
+    if (g_bSendCtrl || g_bIsCode)
+    {
+        //
+        //  Don't attempt to process any input if we're Code-shifted or waiting
+        //  for the second key of a Code, <key> combination.
+        //
+        return;
+    }
+    
     while ((ch = uart_get_rx_byte()) != 0)
     {
         static bit s_bSwallowLf = 0;
