@@ -28,6 +28,7 @@
 #include "terminal.h"
 
 #define _XTAL_FREQ 18432000
+#include "leds.h"
 
 //
 // This is the main ISR, handling the slowest-latency interrupts; the
@@ -48,16 +49,11 @@ int main(int argc, char* argv[])
     ANSELC = 0;
     ANSELD = 0;
     ANSELE = 0;
-    
+
+    leds_init();    
     uart_init();
     keyboard_init();
-    terminal_init();
-    
-    TRISA0 = 0;
-    TRISA1 = 0;
-    
-    LATA0  = 0;
-    LATA1  = 0;
+    terminal_init();  
     
 #if 0   // scan timing tests
     uint8_t target = ~1;
@@ -73,8 +69,8 @@ int main(int argc, char* argv[])
     
     while (1)
     {
-        LATA0 = (PORTB == 0xff);
-        LATA1 = (PORTB == target);
+        LED1 = (PORTB == 0xff);
+        LED2 = (PORTB == target);
         
         if (TMR0IF == 1)
         {
@@ -91,14 +87,14 @@ int main(int argc, char* argv[])
 #if 0
     while (1)
     {
-        LATA0 = 1;
+        LED1 = 1;
         for (unsigned char c = '0'; c <= '9'; c++)
         {
-            LATA1 = 1;
+            LED2 = 1;
             putchar(c);
-            LATA1 = 0;
+            LED2 = 0;
         }
-        LATA0 = 0;
+        LED1 = 0;
         GIE = 1;
         __delay_ms(20);
     }
