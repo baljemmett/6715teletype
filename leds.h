@@ -12,8 +12,8 @@
 extern "C" {
 #endif
 
-#define LED1    LATA0
-#define LED2    LATA1
+#define LED1    LATA1
+#define LED2    LATA0
     
 #define leds_init()     \
 {                       \
