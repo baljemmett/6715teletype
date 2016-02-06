@@ -26,8 +26,7 @@
 #include "uart.h"
 #include "keyboard.h"
 #include "terminal.h"
-
-#define _XTAL_FREQ 18432000
+#include "timers.h"
 #include "leds.h"
 
 //
@@ -40,6 +39,8 @@ void main_isr(void)
         uart_tx_isr();
     if (RCIF && RCIE)
         uart_rx_isr();
+    if (TMR0IF && TMR0IE)
+        timers_isr();
 }
 
 int main(int argc, char* argv[])
@@ -51,6 +52,7 @@ int main(int argc, char* argv[])
     ANSELE = 0;
 
     leds_init();    
+    timers_init();
     uart_init();
     keyboard_init();
     terminal_init();  
