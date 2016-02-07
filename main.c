@@ -57,50 +57,6 @@ int main(int argc, char* argv[])
     keyboard_init();
     terminal_init();  
     
-#if 0   // scan timing tests
-    uint8_t target = ~1;
-    uint8_t ticks  = 0;
-    
-    TMR0CS = 0;
-    PSA    = 0;
-    PS0    = 1;
-    PS1    = 1;
-    PS2    = 1;
-    TMR0   = 0;
-    TMR0IF = 0;
-    
-    while (1)
-    {
-        LED1 = (PORTB == 0xff);
-        LED2 = (PORTB == target);
-        
-        if (TMR0IF == 1)
-        {
-            TMR0IF = 0;
-            
-            if (++ticks == 0)
-            {
-                target = ~((~target) * 2);
-            }
-        }
-    }
-#endif
-    
-#if 0
-    while (1)
-    {
-        LED1 = 1;
-        for (unsigned char c = '0'; c <= '9'; c++)
-        {
-            LED2 = 1;
-            putchar(c);
-            LED2 = 0;
-        }
-        LED1 = 0;
-        GIE = 1;
-        timers_block_ms(20);
-    }
-#else
     GIE = 1;
     
     while (1)
@@ -108,5 +64,4 @@ int main(int argc, char* argv[])
         keyboard_update();
         terminal_process();
     }
-#endif
 }
