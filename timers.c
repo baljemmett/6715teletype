@@ -52,7 +52,7 @@ void timers_init(void)
     
     TMR0CS = 0;
     TMR0   = TMR0_RELOAD_VALUE;
-    TMR0IE = 1;
+    TMR0IE = 0;
 }
 
 void timers_isr(void)
@@ -68,17 +68,49 @@ void timers_isr(void)
         //
         //  ... and handle any running timers
         //
+        TMR0IE = 0;
+
         if (g_cmsHoldoff)
-            --g_cmsHoldoff;
+        {
+            if (--g_cmsHoldoff > 0)
+            {
+                TMR0IE = 1;
+            }
+        }
+    }
+}
+
+static void timers_start(void)
+{
+    if (!TMR0IE)
+    {
+        TMR0   = TMR0_RELOAD_VALUE;
+        TMR0IE = 1;
     }
 }
 
 void timers_start_holdoff_ms(uint16_t cmsDelay)
 {
+    uint8_t bOldIE  = TMR0IE;
+
+    TMR0IE = 0;
     g_cmsHoldoff += cmsDelay;
+    TMR0IE = bOldIE;
+    
+    timers_start();
 }
 
 bit timers_is_holdoff_running(void)
 {
-    return g_cmsHoldoff > 0;
+    uint8_t bOldIE  = TMR0IE;
+    uint8_t bRetval = 0;
+    
+    TMR0IE = 0;
+    if (g_cmsHoldoff > 0)
+    {
+        bRetval = 1;
+    }
+    TMR0IE = bOldIE;
+    
+    return bRetval;
 }
