@@ -98,7 +98,7 @@ int main(int argc, char* argv[])
         }
         LED1 = 0;
         GIE = 1;
-        __delay_ms(20);
+        timers_block_ms(20);
     }
 #else
     GIE = 1;

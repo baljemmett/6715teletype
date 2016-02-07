@@ -2,8 +2,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "keyboard.h"
+#include "timers.h"
 
-#define _XTAL_FREQ 18432000
 #define KEYSTROKE_GAP   30      // milliseconds between keystrokes
 #define KEYSTROKE_TICKS 10      // scan ticks for a keystroke
 #define KEYCHORD_BEFORE  3      // scan ticks either side of a chorded keystroke
@@ -475,7 +475,7 @@ void keyboard_init(void)
     while (PORTB == 0xff)
         ;
     
-    __delay_ms(4);
+    timers_block_ms(4);
     
     g_ISRdata.pending = 0xff;
     IOCIF = 0;
@@ -510,6 +510,9 @@ static void keyboard_wait_ticks(uint8_t nTicks)
 static void keyboard_send_key_chord(uint8_t row_1, uint8_t col0_1, uint8_t col1_1,
                                     uint8_t row_2, uint8_t col0_2, uint8_t col1_2)
 {
+    while (timers_is_holdoff_running())
+        ;   // sanity check in case someone calls us when they shouldn't
+    
     char interrupts_enabled = keyboard_complete_scan_disable_interrupts();
 
     do
@@ -518,7 +521,7 @@ static void keyboard_send_key_chord(uint8_t row_1, uint8_t col0_1, uint8_t col1_
         while (PORTB == 0xff)
             ;   // now we're in a scan pulse...
         
-        __delay_ms(4);  // ... so this should land us in the dead period
+        timers_block_ms(4);  // ... so this should land us in the dead period
     }
     while (PORTB != 0xff);  // but make sure it has before continuing
     
@@ -541,8 +544,8 @@ static void keyboard_send_key_chord(uint8_t row_1, uint8_t col0_1, uint8_t col1_
         keyboard_wait_ticks(KEYCHORD_AFTER);
         keyboard_set_key_up(row_1, col0_1, col1_1);
     }
-    
-    __delay_ms(KEYSTROKE_GAP);
+
+    timers_start_holdoff_ms(KEYSTROKE_GAP);
 }
 
 #define keyboard_send_key(row, col0, col1) keyboard_send_key_chord(0, 0, 0, row, col0, col1)

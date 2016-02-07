@@ -3,8 +3,8 @@
 #include "terminal.h"
 #include "keyboard.h"
 #include "uart.h"
+#include "timers.h"
 
-#define _XTAL_FREQ 18432000
 #define RETURN_DELAY 1000
 
 //
@@ -130,7 +130,7 @@ static void terminal_char_printed(uint8_t bCanBreak)
     //
     if (bCanBreak && g_bAutoReturn && g_cxPosition > g_cxBell)
     {
-        __delay_ms(RETURN_DELAY);        
+        timers_start_holdoff_ms(RETURN_DELAY);        
         g_cxPosition = g_cxLeftMargin;
     }
 }
@@ -151,7 +151,7 @@ static void terminal_handle_motion(keyid_t nKey)
         case KEY_MAR_RTN:
             if (g_cxPosition > g_cxLeftMargin)
             {
-                __delay_ms(RETURN_DELAY);
+                timers_start_holdoff_ms(RETURN_DELAY);
             }
             
             g_cxPosition = g_cxLeftMargin;
@@ -390,16 +390,17 @@ void terminal_process(void)
         terminal_keyevent(nEvent);
     }
     
-    if (g_bSendCtrl || g_bIsCode)
+    if (g_bSendCtrl || g_bIsCode || timers_is_holdoff_running())
     {
         //
-        //  Don't attempt to process any input if we're Code-shifted or waiting
-        //  for the second key of a Code, <key> combination.
+        //  Don't attempt to process any input if we're Code-shifted, waiting
+        //  for the second key of a Code, <key> combination, or in the waiting
+        //  period between injected keystrokes watching for user interaction.
         //
         return;
     }
     
-    while ((ch = uart_get_rx_byte()) != 0)
+    if ((ch = uart_get_rx_byte()) != 0)
     {
         static bit s_bSwallowLf = 0;
         
