@@ -71,6 +71,8 @@ static bit g_bIsCode     = 0;
 static bit g_bCodePress  = 0;
 static bit g_bSendCtrl   = 0;
 
+static char g_chPending  = 0;
+
 static uint8_t  g_cxCharacter   =                            XPI  / POWERUP_CPI;
 static uint16_t g_cxPosition    = (POWERUP_LEFT_MARGIN     * XPI) / POWERUP_CPI;
 static uint16_t g_cxLeftMargin  = (POWERUP_LEFT_MARGIN     * XPI) / POWERUP_CPI;
@@ -209,11 +211,10 @@ static void terminal_inject_ascii(char ch)
         else if (g_bIsShifted)
         {
             //
-            //  Problem - can't lop typist's finger off to remove shift state!
-            //  For now, send as-is and whatever.  In future, maybe stop and
-            //  flash attention light or something?
+            //  Wait for the user to release the Shift key before continuing.
             //
-            keyboard_send_keystroke(nKey);
+            g_chPending = ch;
+            return;
         }
         else
         {
@@ -400,6 +401,39 @@ void terminal_process(void)
         //  for the second key of a Code, <key> combination, or in the waiting
         //  period between injected keystrokes watching for user interaction.
         //
+        return;
+    }
+    
+    if (g_chPending)
+    {
+        //
+        //  We paused to wait for the user to release the Shift key; have they
+        //  done so yet?
+        //
+        if (g_bIsShifted)
+        {
+            //
+            //  No, so keep waiting with a blinking alert LED.
+            //
+            if (! timers_is_blink_running())
+            {
+                LED2 ^= 1;
+                timers_start_blink_ms(150);
+            }
+        }
+        else
+        {
+            //
+            //  Yes, so try typing the character we stalled on again.
+            //
+            char ch = g_chPending;
+            g_chPending = 0;
+            
+            LED2 = 0;
+            
+            terminal_inject_ascii(ch);
+        }
+        
         return;
     }
     

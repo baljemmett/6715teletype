@@ -10,6 +10,7 @@
 #endif
 
 static volatile uint16_t g_cmsHoldoff = 0;
+static volatile uint16_t g_cmsBlink   = 0;
 
 void timers_init(void)
 {
@@ -77,6 +78,14 @@ void timers_isr(void)
                 TMR0IE = 1;
             }
         }
+        
+        if (g_cmsBlink)
+        {
+            if (--g_cmsBlink > 0)
+            {
+                TMR0IE = 1;
+            }
+        }
     }
 }
 
@@ -103,4 +112,20 @@ void timers_start_holdoff_ms(uint16_t cmsDelay)
 bit timers_is_holdoff_running(void)
 {
     return (g_cmsHoldoff > 0);
+}
+
+void timers_start_blink_ms(uint16_t cmsDelay)
+{
+    uint8_t bOldIE  = TMR0IE;
+
+    TMR0IE = 0;
+    g_cmsBlink += cmsDelay;
+    TMR0IE = bOldIE;
+    
+    timers_start();
+}
+
+bit timers_is_blink_running(void)
+{
+    return (g_cmsBlink > 0);
 }

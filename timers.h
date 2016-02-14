@@ -23,6 +23,9 @@ extern "C" {
     
     extern void timers_start_holdoff_ms(uint16_t cmsDelay);
     extern bit  timers_is_holdoff_running(void);
+    
+    extern void timers_start_blink_ms(uint16_t cmsDelay);
+    extern bit  timers_is_blink_running(void);
 
 #ifdef	__cplusplus
 }
