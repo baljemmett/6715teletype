@@ -161,8 +161,18 @@ static void terminal_handle_motion(keyid_t nKey)
             break;
             
         case KEY_MAR_REL:
+            g_cxLeftMargin = 0;
+            break;
+            
         case KEY_LMAR:
+            g_cxLeftMargin = g_cxPosition;
+            break;
+            
         case KEY_RMAR:
+            g_cxRightMargin = g_cxPosition;
+            g_cxBell = g_cxRightMargin - (MARGIN_BELL_CHARS * g_cxCharacter);
+            break;
+            
         case KEY_TSET:
         case KEY_TCLR:
         case KEY_PAPER_UP:
