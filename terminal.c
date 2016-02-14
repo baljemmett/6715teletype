@@ -4,6 +4,7 @@
 #include "keyboard.h"
 #include "uart.h"
 #include "timers.h"
+#include "leds.h"
 
 #define RETURN_DELAY 1000
 
@@ -274,6 +275,7 @@ static void terminal_keyevent(keyevent_t nEvent)
             {
                 g_bCodePress = 0;
                 g_bSendCtrl  = 1;
+                LED1         = 1;
             }
         }
         
@@ -348,6 +350,7 @@ static void terminal_keyevent(keyevent_t nEvent)
     if (g_bSendCtrl)
     {
         g_bSendCtrl = 0;
+        LED1        = 0;
         
         if (ch >= 'A' && ch <= 'Z')
         {
