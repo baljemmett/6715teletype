@@ -102,15 +102,5 @@ void timers_start_holdoff_ms(uint16_t cmsDelay)
 
 bit timers_is_holdoff_running(void)
 {
-    uint8_t bOldIE  = TMR0IE;
-    uint8_t bRetval = 0;
-    
-    TMR0IE = 0;
-    if (g_cmsHoldoff > 0)
-    {
-        bRetval = 1;
-    }
-    TMR0IE = bOldIE;
-    
-    return bRetval;
+    return (g_cmsHoldoff > 0);
 }
