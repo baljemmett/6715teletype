@@ -360,7 +360,10 @@ static void terminal_keyevent(keyevent_t nEvent)
             keyboard_send_keystroke(KEY_BACKSPC);
             terminal_handle_motion(KEY_BACKSPC);
             
-            keyboard_send_keychord(KEY_SHIFT, KEY_CENTS);
+            if (g_bIsShifted)
+                keyboard_send_keystroke(KEY_CENTS);
+            else
+                keyboard_send_keychord(KEY_SHIFT, KEY_CENTS);
             terminal_handle_motion(KEY_CENTS);
         }
         else if (ch >= 'a' && ch <= 'z')
