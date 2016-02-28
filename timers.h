@@ -26,6 +26,10 @@ extern "C" {
     
     extern void timers_start_blink_ms(uint16_t cmsDelay);
     extern bit  timers_is_blink_running(void);
+    
+    extern void timers_start_typematic_ms(uint16_t cmsDelay);
+    extern void timers_stop_typematic(void);
+    extern bit  timers_is_typematic_running(void);
 
 #ifdef	__cplusplus
 }
