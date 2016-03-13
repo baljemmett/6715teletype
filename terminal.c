@@ -6,7 +6,9 @@
 #include "timers.h"
 #include "leds.h"
 
-#define RETURN_DELAY 1000
+#define RETURN_DELAY        1000
+#define TYPEMATIC_INTERVAL  77
+#define TYPEMATIC_DELAY     400
 
 //
 //  'X-units per inch'; we use 120 because 10/12/15cpi all evenly divide it,
@@ -70,8 +72,10 @@ static bit g_bIsShifted  = 0;
 static bit g_bIsCode     = 0;
 static bit g_bCodePress  = 0;
 static bit g_bSendCtrl   = 0;
+static bit g_bRepeating  = 0;
 
 static char g_chPending  = 0;
+static char g_chRepeat   = 0;
 
 static uint8_t  g_cxCharacter   =                            XPI  / POWERUP_CPI;
 static uint16_t g_cxPosition    = (POWERUP_LEFT_MARGIN     * XPI) / POWERUP_CPI;
@@ -294,6 +298,40 @@ static void terminal_keyevent(keyevent_t nEvent)
     }
     
     //
+    //  Handle typematic repeat - only Space and the Repeat key do this
+    //
+    if (nKey == KEY_SPACE || nKey == KEY_REPEAT)
+    {
+        g_bRepeating = keyboard_is_down_event(nEvent);
+        
+        if (! g_bRepeating)
+        {
+            timers_stop_typematic();
+        }
+        else if (nKey == KEY_SPACE)
+        {
+            //
+            //  Holding the space bar autorepeats spaces after a slight delay;
+            //  we'll set the last character to space as part of the normal
+            //  key-down processing below.
+            //
+            timers_start_typematic_ms(TYPEMATIC_DELAY);
+        }
+        else
+        {
+            //
+            //  Holding the Repeat key autorepeats the last key immediately;
+            //  since Repeat is a non-printing key, the last printing character
+            //  will still be in our last character g_chRepeat.
+            //
+            timers_start_typematic_ms(TYPEMATIC_INTERVAL);
+            
+            if (g_chRepeat)
+                putchar(g_chRepeat);    // TODO: handle motion!
+        }
+    }
+    
+    //
     //  Only key-down events can generate keystrokes at the moment
     //
     if (! keyboard_is_down_event(nEvent))
@@ -389,7 +427,10 @@ static void terminal_keyevent(keyevent_t nEvent)
     }
 
     if (ch != 0)
+    {
         putchar(ch);
+        g_chRepeat = ch;
+    }
 }
 
 void terminal_init(void)
@@ -405,6 +446,14 @@ void terminal_process(void)
     while ((nEvent = keyboard_get_next_event()) != KEY_NONE)
     {
         terminal_keyevent(nEvent);
+    }
+    
+    if (g_bRepeating && ! timers_is_typematic_running())
+    {
+        timers_start_typematic_ms(TYPEMATIC_INTERVAL);
+        
+        if (g_chRepeat)
+            putchar(g_chRepeat);        // TODO: handle motion
     }
     
     if (g_bSendCtrl || g_bIsCode || timers_is_holdoff_running())
